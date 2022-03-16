@@ -1,0 +1,98 @@
+---
+title: "Tooth Growth Dataset Analysis"
+author: "John Slough II"
+date: "9 Jan 2015"
+output: pdf_document
+---
+We were asked to analyze the Tooth Growth dataset in R.  From the R help file: "the response is the length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1, and 2 mg) with each of two delivery methods (orange juice or ascorbic acid)." The variable "len" is the tooth length in mm, "supp" is the supplement type delivery method (OJ = orange juice, VC = ascorbic acid), and "dose" is the dose level of vitamin C (0.5, 1, 2 mg).
+
+**Exploratory Data Analysis**
+
+There are a total of `r nrow(ToothGrowth)` observations in this dataset.  A summary of the data can be seen below.  
+
+```{r}
+library(plyr)
+summary(ToothGrowth)
+ddply(ToothGrowth,"supp",summarize, avg=mean(len))
+ddply(ToothGrowth,"supp",summarize, StDev=sd(len))
+ddply(ToothGrowth,"dose",summarize, avg=mean(len))
+ddply(ToothGrowth,"dose",summarize, StDev=sd(len))
+ddply(ToothGrowth,c("supp","dose"),summarize, avg=mean(len))
+ddply(ToothGrowth,c("supp","dose"),summarize, StDev=sd(len))
+```
+
+The first plot shows the tooth length by supplement type.  From the boxplot, it appears that they are not very dissimilar.
+
+```{r,}
+boxplot(ToothGrowth$len~ToothGrowth$supp,col=c("orange","green"),
+        main="Tooth Length by Supplement",ylab="Tooth Length (mm)",
+        xlab="Supplement (type)")
+```
+
+The next plot shows the tooth length by dose, 0.5, 1, and 2 mg. There does appear to be a difference between these, especially between the 0.5 and 2 mg doses.
+
+```{r,}
+boxplot(ToothGrowth$len~ToothGrowth$dose,col=c("lightblue",
+                                               "blue","darkblue"),
+        main="Tooth Length by Dose",ylab="Tooth Length (mm)",xlab="Dose (mg)")
+```
+
+
+The next plot shows the interaction between dose and supplement type.  When dose is considered, it appears that both supplement types increase the tooth length.
+
+```{r}
+boxplot(len ~ interaction(supp,dose), data=ToothGrowth,
+        col=c("yellow","lightgreen","orange","green","salmon","darkgreen"),
+        main="Tooth Length by Dose and Supplement",ylab="Tooth Length (mm)",
+        xlab="Dose (mg) & Supplement (type) Interaction")
+```
+
+***Hypothesis Tests***
+
+There are many hypothesis tests that could be performed with this dataset.  The plots above already give an idea of which tests could prove to be siginificant.
+We can already surmise that for tooth length, there is probably a highly significant difference between doses, but perhaps not a significant difference between supplement types. Two sample t-tests were performed.  The assumptions underlying this test are: The populations from which the samples were drawn are normally distributed.  The standard deviations of the populations are equal. The samples were randomly drawn. 
+
+```{r}
+# T test for Supplement type
+VC=subset(ToothGrowth, supp=="VC")
+OJ=subset(ToothGrowth,supp=="OJ")
+t.test(VC$len,OJ$len)
+
+# T test for doses
+dose0.5=subset(ToothGrowth,dose==0.5)
+dose2=subset(ToothGrowth,dose==2.0)
+t.test(dose0.5$len,dose2$len)
+tdose=round(t.test(dose0.5$len,dose2$len)$p.value,14)
+
+dose0.5=subset(ToothGrowth,dose==0.5)
+dose1=subset(ToothGrowth,dose==1.0)
+t.test(dose0.5$len,dose1$len)
+
+t.test(dose1$len,dose2$len)
+
+# T test for supplement and dose
+VCdose.5=subset(ToothGrowth,dose==0.5 & supp=="VC")
+OJdose.5=subset(ToothGrowth,dose==0.5 & supp=="OJ")
+t.test(VCdose.5$len,OJdose.5$len)
+
+VCdose1=subset(ToothGrowth,dose==1.0 & supp=="VC")
+OJdose1=subset(ToothGrowth,dose==1.0 & supp=="OJ")
+t.test(VCdose1$len,OJdose1$len)
+
+VCdose2=subset(ToothGrowth,dose==2.0 & supp=="VC")
+OJdose2=subset(ToothGrowth,dose==2.0 & supp=="OJ")
+t.test(VCdose2$len,OJdose2$len)
+```
+Almost all of the t-tests performed resulted in significant differences in the means of the tooth length at the p=0.05 level. 
+
+The t-test for the supplement type resulted in a p-value of `r round(t.test(VC$len,OJ$len)$p.value,4)`, just barely higher than the 0.05 significant level.  Here we have very slight evidence that the tooth length means of the supplement types are not dissimilar.  
+
+We have strong evidence that dose results in different mean lengths for teeth. 
+Between the 0.5 and 2.0 mg dose, a p-value of less than 0.000000001 is produced. This is highly significant.  
+
+When dose and supplement are considered, there are two significant difference at the 0.5 and 1.0 mg dose levels, between supplement types.  The p-values for these tests (dose of 0.5 mg, by supplement type and dose of 1.0 mg, by supplement type) were `r t.test(VCdose.5$len,OJdose.5$len)$p.value` and `r t.test(VCdose1$len,OJdose1$len)$p.value` respectively.
+
+
+**Conclusion**
+
+Overall, we can conclude that as the dose of vitamin C increases, so does the tooth length. The supplement type only appears to play a significant role at the 0.5 and 1.0 mg dose levels.
